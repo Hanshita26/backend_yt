@@ -4,12 +4,29 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import {DB_NAME} from './constants.js'
 import connectDB from './db/index.js';
+import { app } from './app.js';
 
 dotenv.config({path:"./.env"});
+const PORT=process.env.PORT || 8000;
+
 
 // approach 2 - a better professional approach
 
-connectDB();
+// because it is async await and returns a promise
+connectDB()
+.then((res)=>{
+    console.log("it is running successfully!");
+    app.on("error",(err)=>{
+        console.log("there are some errors present!");
+    })
+    
+    app.listen(PORT,()=>{
+        console.log(`port is listening on: http://localhost:${PORT}`)
+    })
+})
+.catch((err)=>{
+    console.log("MONGO DB CONNECTED FAILED!!!",err)
+});
 
 
 // 1st approach but it pollutes the index.js file
