@@ -2,10 +2,16 @@
 
 
 // Promise.resolve().catch()
-const asyncHandler=(fn)=>(req,res,next)=>{
-    Promise.resolve(fn(req,res,next)).catch(next);
-    
+
+const asyncHandler=(fn)=>{
+    return (req,res,next)=>{
+        Promise.resolve(fn(req,res,next)).catch((err)=>next(err))
+    }
 }
+// const asyncHandler=(fn)=>(req,res,next)=>{
+//     Promise.resolve(fn(req,res,next)).catch(next);
+    
+// }
 
 export {asyncHandler}
 
@@ -33,4 +39,4 @@ export {asyncHandler}
 
 // }
 
-// function ko function mai pass kardiya
+// function ko function mai pass kardiya - higher order function

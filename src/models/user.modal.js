@@ -59,7 +59,6 @@ const userSchema = new mongoose.Schema(
     
     {timestamps:true});
 
-
     // pre hook:-
     // dont use arrow function , because there we cannot use this keyword , which we highly need here
 userSchema.pre("save",async function (next){
@@ -71,7 +70,6 @@ userSchema.pre("save",async function (next){
     this.password= bcrypt.hash(this.password,10);
     next();
     // this takes 2 fields - kis chiz ko hash karna hai and how many rounds of hashing
-
 
 });
 
@@ -87,6 +85,7 @@ userSchema.methods.isPasswordCorrect = async function(password){
 
 userSchema.methods.generateAccessToToken= function(){
 
+    // it takes 3 things - payload,token key and its expiry
     jwt.sign(
         {
         _id:this._id,
