@@ -6,7 +6,7 @@ import fs from 'fs'; // file system - already present in node.js package
 // and then from local storage to cloudinary - professional setup(rest we can do directly also).
 
 cloudinary.config({
-    cloud_name:HANSHITADATABASE ,
+    cloud_name:process.env.CLOUD_NAME ,
     api_key:process.env.API_KEY,
     api_secret:process.env.API_SECRET
 });

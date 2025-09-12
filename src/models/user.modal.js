@@ -67,7 +67,7 @@ userSchema.pre("save",async function (next){
         return next();
     }// so that it dont encrypt again and again on every reloading
 
-    this.password= bcrypt.hash(this.password,10);
+    this.password= await bcrypt.hash(this.password,10);
     next();
     // this takes 2 fields - kis chiz ko hash karna hai and how many rounds of hashing
 
@@ -125,4 +125,4 @@ export const User=mongoose.model("User",userSchema);
 
 // so jsonwebtoken cannot be applied directly , we need to use mongoose hooks - 
 // one of them is PRE - ki for instance user wants to save password , so if we  apply
-// pre hook , just befire saving, it will do something - maybe hash the password
+// pre hook , just before saving, it will do something - maybe hash the password
