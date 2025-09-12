@@ -17,7 +17,7 @@ const registerUser=asyncHandler(async (req,res)=>{
 
     const {fullName,username,email,password}=req.body
     console.log("email:",email, "password:",password,"username:",username,"fullName:",fullName);
-
+    console.log(req.files);     
     if(fullName.trim()==="" || !fullName){
         throw new ApiError(400,"Full Name is required!");
     }
@@ -39,7 +39,7 @@ const registerUser=asyncHandler(async (req,res)=>{
     // User.findOne({username})- this will check and match with the username - find or findOne method can be used
     // another method to check if username exists , check for mail or if mail exits , check for username 
 
-    const existingUser=User.findOne({
+    const existingUser=await User.findOne({
         $or:[{username},{email}]
 
     })
@@ -66,10 +66,11 @@ const registerUser=asyncHandler(async (req,res)=>{
 
 
     // cloudinary upload
+console.log("control reached here1");
 
     const avatarCloudinaryPath=await filepath(avatarLocalPath); // await is mandatory
-    const coverImageCloudinaryPath=await filepath(coverImage);
-
+    const coverImageCloudinaryPath=await filepath(coverImageLocalpath);
+    console.log("control reached here2");
     if(!avatarCloudinaryPath){
         throw new ApiError(404,"Avatar is required");
     }
@@ -79,8 +80,8 @@ const registerUser=asyncHandler(async (req,res)=>{
     // User is picked from UserModal- it interacts with database using .create method
     const user = await User.create({
         fullName,
-        avatarCloudinaryPath:avatarCloudinaryPath.url,
-        coverImageCloudinaryPath:coverImageCloudinaryPath?.url || "", // because coverImage is not a mandatory field
+        avatar:avatarCloudinaryPath.url,
+        coverImage:coverImageCloudinaryPath?.url || "", // because coverImage is not a mandatory field
         email,
         password,
         username,
@@ -89,7 +90,6 @@ const registerUser=asyncHandler(async (req,res)=>{
 
 
     // it's a syntax where we put - in front of fields which are not required
-    // 
     const createdUser=await User.findById(user._id).select(
         "-password -refreshToken"
     )

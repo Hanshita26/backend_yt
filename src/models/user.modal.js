@@ -43,16 +43,16 @@ const userSchema = new mongoose.Schema(
         password:{
             type:String,
             required:[true,"password id required"],
-            validate:{
-                validator:function(value){
-                    return /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(value);
-                },
-                message:"Enter a valid password",
-            }
+            // validate:{
+            //     validator:function(value){
+            //         return /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(value);
+            //     },
+            //     message:"Enter a valid password",
+            // }
         },
         refreshToken:{
             type:String,
-            required:true,
+            // required:true,
         }
 
     },
