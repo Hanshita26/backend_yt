@@ -1,6 +1,8 @@
 import { Router } from "express"; // through express
 import { registerUser } from "../controllers/user.controller.js";
 import {upload} from '../middlewares/multer.middleware.js';
+import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { loginUser , userLoggedout } from "../controllers/user.controller.js";
 
 const router=Router();
 
@@ -25,6 +27,16 @@ router.route('/register').post(
     ]),
     registerUser)
 
+    router.route('/login').post(
+        loginUser
+    )
+
+    // secured routes
+
+    router.route('/logout').post(verifyJWT,userLoggedout);
+
+
+    
 // so what will happen finall is , you will go to - http://localhost:8000/users/register
 
 export default router

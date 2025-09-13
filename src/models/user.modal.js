@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema(
         ref:"Video",
     }],
         username:{
-            type:String,
+            type:String, 
             required:true,
             lowercase:true,
             unique:true,
@@ -73,7 +73,7 @@ userSchema.pre("save",async function (next){
 
 });
 
-// custom methods can also be created using methods.
+// custom methods can also be created using .methods.
 // we are comparing passwords
 
 userSchema.methods.isPasswordCorrect = async function(password){
