@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema(
             lowercase:true,
             unique:true,
             trim:true,
-            index:true, // searchbale optimisation
+            index:true, // searchable optimisation
         },
         email:{
             type:String,
@@ -86,7 +86,7 @@ userSchema.methods.isPasswordCorrect = async function(password){
 userSchema.methods.generateAccessToToken= function(){
 
     // it takes 3 things - payload,token key and its expiry
-    jwt.sign(
+   return jwt.sign(
         {
         _id:this._id,
         email:this.email,
@@ -105,7 +105,7 @@ userSchema.methods.generateAccessToToken= function(){
 
 userSchema.methods.generateRefreshToken= function(){
 
-    jwt.sign(
+  return  jwt.sign(
         {
             // less info
             _id:this._id,

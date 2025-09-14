@@ -5,16 +5,16 @@ import { filepath } from "../utils/cloudinary.js";
 import ApiResponse from "../utils/apiResponse.js"
 import { application } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-
+import jwt from 'jsonwebtoken';
+// import dotenv from './.env'
 
 const generateAccessTokenAndRefereshToken = async(userId)=>{
     try{
         const user=await User.findById(userId)
-        const accessToken= User.generateAccessToToken();
-        const refreshToken=User.generateRefreshToken();
+        const accessToken= user.generateAccessToToken();
+        const refreshToken=user.generateRefreshToken();
 
-        // refersh token should be stored in database 
-
+        // refresh token should be stored in database - user.save()
         user.refreshToken=refreshToken
         await user.save({validateBeforeSave:false})
 
@@ -22,7 +22,7 @@ const generateAccessTokenAndRefereshToken = async(userId)=>{
 
 
     }catch(err){
-        throw new ApiError(500,"something went wrong while generating refersh and access token");
+        throw new ApiError(500,"something went wrong while generating refresh and access token");
     }
 
 }
@@ -146,13 +146,14 @@ const loginUser= asyncHandler(async (req,res)=>{
 
 
     // deconstructor
+    console.log("Login initiated")
     const {email,password}=req.body;
 
-    if(email==="" || !email ){
+    if(!email ){
         throw new ApiError(400,"Email is required!");
     }
 
-    if(password==="" || !password){
+    if(!password){
         throw new ApiError(400,"password is required!");
     }
 
@@ -170,7 +171,12 @@ const loginUser= asyncHandler(async (req,res)=>{
     // access and refresh token:-
     // we have created a function because it will be used multiple times
 
+
+    console.log("reached here ----");
+
     const {accessToken,refreshToken}=await generateAccessTokenAndRefereshToken(user._id);
+    console.log(accessToken,refreshToken);
+    console.log("couldn't reach here");
 
     
     const loggedInUser =await User.findById(user._id)
@@ -180,7 +186,7 @@ const loginUser= asyncHandler(async (req,res)=>{
     const options={
         httpOnly:true, // frontend cannot modify it with this option
         secure:true,
-        sameSite: "strict",
+        // sameSite: "strict",
 
     }
 
@@ -228,7 +234,7 @@ const userLoggedout=asyncHandler(async(req,res)=>{
     const options={
         httpOnly:true, // frontend cannot modify it with this option
         secure:true,
-        sameSite: "strict",
+        // sameSite: "strict",
 
     }
 
@@ -240,6 +246,60 @@ const userLoggedout=asyncHandler(async(req,res)=>{
 
 })
 
+// TOKEN ENDPOINTS ----------------------------------------------------------------------------------------------------------------------------------------------
+const refreshAccessToken = asyncHandler(async(req,res)=>{
+    const incomingRefreshToken=req.cookies.refreshToken || req.body.refreshToken;
+
+    if(!incomingRefreshToken){
+        throw new ApiError(401,"Refresh token not found");
+    }
+
+    try{
+        const decodedToken=jwt.verify(
+        incomingRefreshToken,
+        process.env.REFRESH_TOKEN_SECRET
+    )
+
+    if(!decodedToken){
+        throw new ApiError(401,"token not found!");
+    }
+
+    const user=await User.findById(decodedToken?._id);
+
+    if(!user){
+        throw new ApiError(401,"Invalid refresh token")
+    }
 
 
-export {registerUser,loginUser,userLoggedout}
+    // when we created refreshToken-it was saved in database as well 
+    // if they match , means its valid
+
+    if(user?.refreshToken!==incomingRefreshToken){
+        throw new ApiError(404,"Tokens not matched")
+    }
+
+    const options={
+        httpOnly:true,
+        secure:true,
+    }
+
+    const {accessToken,refreshToken:newRefreshToken}=await generateAccessTokenAndRefereshToken(user._id);
+
+    return res
+    .status(200)
+    .cookie("accessToken", accessToken,options)
+    .cookie("refreshToken", newRefreshToken,options)
+    .json(
+        new ApiResponse(
+            200,{
+                accessToken,refreshToken:newRefreshToken
+            },"Refresh Token created again!"
+        )
+    )  
+    }catch(err){
+        console.log(err || "There is some error generating the tokens");
+    }
+
+})
+
+export {registerUser,loginUser,userLoggedout,refreshAccessToken}

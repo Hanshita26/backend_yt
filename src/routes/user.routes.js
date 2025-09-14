@@ -2,7 +2,7 @@ import { Router } from "express"; // through express
 import { registerUser } from "../controllers/user.controller.js";
 import {upload} from '../middlewares/multer.middleware.js';
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { loginUser , userLoggedout } from "../controllers/user.controller.js";
+import { loginUser , userLoggedout , refreshAccessToken } from "../controllers/user.controller.js";
 
 const router=Router();
 
@@ -31,9 +31,11 @@ router.route('/register').post(
         loginUser
     )
 
-    // secured routes
+    // secured routes - use middleWare in between - verifyJWT
 
     router.route('/logout').post(verifyJWT,userLoggedout);
+
+    router.route('/refreshToken').post(refreshAccessToken);
 
 
     
