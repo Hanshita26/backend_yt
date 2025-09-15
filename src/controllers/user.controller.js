@@ -1,11 +1,13 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {ApiError} from '../utils/appError.js';
 import {User}from '../models/user.modal.js';
-import { filepath } from "../utils/cloudinary.js";
+import { filepath, deleteOldPath} from "../utils/cloudinary.js";
 import ApiResponse from "../utils/apiResponse.js"
 import { application } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import jwt from 'jsonwebtoken';
+
+
 // import dotenv from './.env'
 
 const generateAccessTokenAndRefereshToken = async(userId)=>{
@@ -97,6 +99,7 @@ console.log("control reached here1");
 // from cloudinary.js
     const avatarCloudinaryPath=await filepath(avatarLocalPath); // await is mandatory
     const coverImageCloudinaryPath=await filepath(coverImageLocalpath);
+    console.log("call returned from filepath function and response saved in avatar cloudinary path variable",avatarCloudinaryPath);
     console.log("control reached here2");
     if(!avatarCloudinaryPath){
         throw new ApiError(404,"Avatar is required");
@@ -108,7 +111,9 @@ console.log("control reached here1");
     const user = await User.create({
         fullName,
         avatar:avatarCloudinaryPath.url,
+        avatar_publicId:avatarCloudinaryPath.public_id,
         coverImage:coverImageCloudinaryPath?.url || "", // because coverImage is not a mandatory field
+        coverImage_publicId:avatarCloudinaryPath.public_id,
         email,
         password,
         username,
@@ -311,7 +316,16 @@ const changeCurrentPassword=asyncHandler(async(req,res)=>{
         throw new ApiError(400,"New password and confirmed passwords not matched!");
     }
 
-    const user=await User.findById(req.user?._id)
+    console.log(req);
+
+//     if (!User.findById(user?._id)) {
+//     throw new ApiError(401, "Unauthorized. Please login again.");
+//   }
+
+    const user=await User.findById(req.user?._id).select("+password")
+    if(!user){
+        throw new ApiError(401,"user not found!");
+    }
     const checking=await user.isPasswordCorrect(oldpassword);
 
     if(!checking){
@@ -357,13 +371,19 @@ const updateAccountDetails=asyncHandler(async(req,res)=>{
 })
 
 const updateAvatar=asyncHandler(async(req,res)=>{
+    // file - from multer
     const avatarLocalPath=req.file?.path;
 
     if(!avatarLocalPath){
-        throw new ApiError(400,"Avatar not foumd!")
+        throw new ApiError(400,"Avatar not found!")
     }
 
     // file path is a method in cloudinay.js - that helps to upload 
+    console.log(req.user);
+     const deleted=await deleteOldPath(req.user.avatar_publicId);
+    if(!deleted){
+        throw new ApiError(404,"old avatar not deleted");
+    }
 
     const newAvatar=await filepath(avatarLocalPath)
     if(!newAvatar.url){
@@ -373,18 +393,26 @@ const updateAvatar=asyncHandler(async(req,res)=>{
     const user=await User.findByIdAndUpdate(req.user?._id,
         {
             $set:{
-                avatar:newAvatar.url
+                avatar:newAvatar.url,
+                avatar_publicId:newAvatar.public_id
             },
         },{
             new:true,
         }
     ).select("-password");
 
+    console.log("reached till here ----");
+    console.log(req.user.avatar_publicId);
+
+    // delete old avatar
+
     return res
     .status(200)
     .json(
         new ApiResponse(200,{},"Avatar updated successfully!")
     )
+    
+
 
 
 
@@ -397,6 +425,12 @@ const updateCoverImage=asyncHandler(async(req,res)=>{
     if(!coverImagePath){
         throw new ApiError(401,"CoverImage is required");
     }
+    // const oldImagePublicId=req.user?.coverImage_publicId
+
+    // if(oldImagePublicId){
+    //     await deleteOldPath(user.coverImage_publicId);
+    // }
+
 
     const coverImage=await filepath(coverImagePath)
     if(!coverImage.url){

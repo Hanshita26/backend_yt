@@ -2,12 +2,13 @@ import {v2 as cloudinary} from 'cloudinary';
 import fs from 'fs'; // file system - already present in node.js package
 
 import dotenv from 'dotenv';
+
 dotenv.config({path:"./.env"});
 // what strategy we are following is ki whatever user will upload will go to server as local storage 
 // and then from local storage to cloudinary - professional setup(rest we can do directly also).
 
 
-
+// UPLOAD ---------------------------------------------
 const filepath=async (localfilepath)=>{
     try{
         console.log(process.env.CLOUDINARY_API_KEY);
@@ -26,7 +27,6 @@ const filepath=async (localfilepath)=>{
         console.log("control never reached here");
 
         console.log("file has been uploaded successfully!");
-        console.log("URL:",response.url);
         return response;
 
     }catch(err){
@@ -43,4 +43,26 @@ cloudinary.config({
     api_secret:process.env.CLOUDINARY_API_SECRET,
 });
 
-export {filepath}
+
+// DELETE ----------------------------------------------------------------------------------
+
+const deleteOldPath=async(publicId)=>{
+    try{
+        if(!publicId){
+        return null;
+    }
+    const result=await cloudinary.uploader.destroy(publicId,{
+            resource_type:"image"
+        });
+        console.log("Old path deleted successfully!");
+        console.log(result);
+        return result;
+
+    }catch(err){
+        console.log("Cloudinary deletion error", err);
+
+    }
+    
+}
+
+export {filepath,deleteOldPath}
