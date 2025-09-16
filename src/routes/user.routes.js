@@ -42,15 +42,15 @@ router.route('/register').post(
 
     router.route('/currentUser').post(verifyJWT,getCurrentUser);
 
-    router.route('/updateAccountDetails').post(verifyJWT,updateAccountDetails);
+    router.route('/updateAccountDetails').patch(verifyJWT,updateAccountDetails);
 
-    router.route('/updateAvatar').post(verifyJWT,upload.single("avatar"),updateAvatar);
+    router.route('/updateAvatar').patch(verifyJWT,upload.single("avatar"),updateAvatar);
 
-    router.route('/updateCoverImage').post(verifyJWT,upload.single("coverImage"),updateCoverImage);
+    router.route('/updateCoverImage').patch(verifyJWT,upload.single("coverImage"),updateCoverImage);
 
-    router.route('/subscribers').post(verifyJWT,getUserChannelProfile);
+    router.route('/c/:subscribers').get(verifyJWT,getUserChannelProfile);
 
-    router.route('/history').post(verifyJWT,getWatchHistory);
+    router.route('/c/:watchHistory').get(verifyJWT,getWatchHistory);
 
 
 
