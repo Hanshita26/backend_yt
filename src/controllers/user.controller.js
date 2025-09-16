@@ -425,22 +425,25 @@ const updateCoverImage=asyncHandler(async(req,res)=>{
     if(!coverImagePath){
         throw new ApiError(401,"CoverImage is required");
     }
-    // const oldImagePublicId=req.user?.coverImage_publicId
 
-    // if(oldImagePublicId){
-    //     await deleteOldPath(user.coverImage_publicId);
-    // }
+    console.log(req.user);
+    const deletedCI=await deleteOldPath(req.user.coverImage_publicId);
+    if(!deletedCI){
+        throw new ApiError(401,"Old Cover Image not deleted");
+    }
+   
 
 
-    const coverImage=await filepath(coverImagePath)
-    if(!coverImage.url){
+    const newCoverImage=await filepath(coverImagePath)
+    if(!newCoverImage.url){
         throw new ApiError(401,"coverImage is missing");
     }
 
 
     const user=await User.findByIdAndUpdate(req.file?._id,{
         $set:{
-            coverImage:coverImage.url
+            coverImage:newCoverImage.url,
+            coverImage_publicId:newCoverImage.public_id
         }
 
     },{
@@ -455,5 +458,152 @@ const updateCoverImage=asyncHandler(async(req,res)=>{
     )
 })
 
+// subscribers and subscribed
 
-export {registerUser,loginUser,userLoggedout,refreshAccessToken,changeCurrentPassword,getCurrentUser,updateAccountDetails,updateAvatar,updateCoverImage}
+const getUserChannelProfile=asyncHandler(async(req,res)=>{
+
+    const {username} =req.params;
+
+    if(!username?.trim()){
+        throw new ApiError(401,"Username not found!");
+    }
+// match is like where clause which helps in filtering on the basis of conditions
+// lookup- used as joins in mongoDB
+// size - used to count
+// at the end we need a count that how many subscribers are there and how many we have subscribed to
+    const channel=await User.aggregate([
+        {
+            $match:{
+                username:username?.toLowerCase()
+            }
+
+
+        },{
+            $lookup:{
+                from:"subscriptions",
+                localField:"_id",
+                foreignField:"channel",
+                as:"subscribers"
+            }
+        },{
+            $lookup:{
+                from:"subscriptions",
+                localField:"_id",
+                foreignField:"subscriber",
+                as:"subscribedTo"
+            }
+        },{
+            $addFields:{
+                subscribersCount:{
+                    $size:"$subscribers"// from 1st lookup
+                },
+                    channelIhavesubscribedTo:{
+                        $size:"$subscribedTo"
+                    },
+                    isSubscribed:{
+                        $cond:{ // just like if-else
+                            if:{$in: [req.user?._id,"$subscribers.subscriber"]},
+                            then:true,
+                            else:false,
+
+                        }
+                        
+
+                    },
+                
+            }
+        },{
+                        $project:{
+                            fullName:1,
+                            email:1,
+                            username:1,
+                            subscribersCount:1,
+                            isSubscribed:1,
+                            channelIhavesubscribedTo:1,
+                            avatar:1,
+                            coverImage:1,
+
+                        }
+                    }
+
+    ])
+
+    // aggregate always returns an array and if no user is found, it will return [], so checking length is must
+
+    if(!channel?.length){
+        throw new ApiError(401,"Channel does not exists!")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200,channel[0],"User channel fetched successfully!")
+    )
+
+})
+
+// get history
+const getWatchHistory=asyncHandler(async(req,res)=>{
+    const user=await User.aggregate([
+        {
+            $match:{
+                // so here instead of using req.user._id - I will be using and extracting
+                // exact id of mongoose using below method
+                // This is an interview question as well ki hamne _id mai kya milta hai - string
+                // but here in aggregation pipelines, we need extracted actual id
+                _id:new mongoose.Types.objectId(
+                    req.user._id
+                )
+            },
+            $lookup:{
+                // Video is the name of video model but 
+                // remember two things - first letter will be small and it will become plural
+                from:"videos",
+                localField:"watchHistory",
+                foreignField:"_id",
+                as:"watchHistory",
+                pipeline:[
+                    {
+                        $lookup:{
+                            from:"users",
+                            localField:"owner",
+                            foreignField:"_id",
+                            as:"owner", 
+                            pipeline:[
+                                {
+                                    $project:{
+                                        fullName:1,
+                                        username:1,
+                                        avatar:1,
+                                        
+
+                                    }
+                                }
+                            ]
+                        }
+                    },{
+                        $addFields:{
+                            owner:{
+                                $first:"$owner"
+                            }
+                        }
+                    }
+                ]
+
+            }
+        }
+    ])
+
+    res
+    .status(200)
+    .json(
+        new ApiResponse(200,user[0].watchHistory,"Watch History created successfully!")
+    )
+
+
+})
+
+
+export {registerUser,loginUser,userLoggedout,refreshAccessToken,changeCurrentPassword,getCurrentUser
+    ,updateAccountDetails,updateAvatar,
+    updateCoverImage,getUserChannelProfile,getWatchHistory}

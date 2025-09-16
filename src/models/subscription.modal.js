@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 
-
 const subscriptionSchema=new mongoose.Schema(
     {
         subscriber:{
@@ -16,7 +15,6 @@ const subscriptionSchema=new mongoose.Schema(
     },
     
     {timestamps:true});
-
 
 
 export const subscription=mongoose.model("subscription",subscriptionSchema);

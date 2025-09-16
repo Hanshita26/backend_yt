@@ -3,7 +3,7 @@ import { registerUser } from "../controllers/user.controller.js";
 import {upload} from '../middlewares/multer.middleware.js';
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { loginUser , userLoggedout , refreshAccessToken,changeCurrentPassword,getCurrentUser } from "../controllers/user.controller.js";
-import {updateAccountDetails,updateAvatar,updateCoverImage} from '../controllers/user.controller.js';
+import {updateAccountDetails,updateAvatar,updateCoverImage,getUserChannelProfile,getWatchHistory} from '../controllers/user.controller.js';
 
 const router=Router();
 
@@ -47,6 +47,10 @@ router.route('/register').post(
     router.route('/updateAvatar').post(verifyJWT,upload.single("avatar"),updateAvatar);
 
     router.route('/updateCoverImage').post(verifyJWT,upload.single("coverImage"),updateCoverImage);
+
+    router.route('/subscribers').post(verifyJWT,getUserChannelProfile);
+
+    router.route('/history').post(verifyJWT,getWatchHistory);
 
 
 

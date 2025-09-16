@@ -131,6 +131,7 @@ export const User=mongoose.model("User",userSchema);
 // token - jwt (json web token)
 // bcrypt - for hashing of password
 
+
 // so jsonwebtoken cannot be applied directly , we need to use mongoose hooks - 
 // one of them is PRE - ki for instance user wants to save password , so if we  apply
 // pre hook , just before saving, it will do something - maybe hash the password
