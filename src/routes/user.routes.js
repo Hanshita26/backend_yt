@@ -48,14 +48,11 @@ router.route('/register').post(
 
     router.route('/updateCoverImage').patch(verifyJWT,upload.single("coverImage"),updateCoverImage);
 
-    router.route('/c/:subscribers').get(verifyJWT,getUserChannelProfile);
+    router.route('/c/:username').get(verifyJWT,getUserChannelProfile);
 
-    router.route('/c/:watchHistory').get(verifyJWT,getWatchHistory);
-
-
-
+    router.route('/watchHistory').get(verifyJWT,getWatchHistory);
 
     
-// so what will happen finall is , you will go to - http://localhost:8000/users/register
+// so what will happen final is , you will go to - http://localhost:8000/users/register
 
 export default router

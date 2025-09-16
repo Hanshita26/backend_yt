@@ -6,6 +6,7 @@ import ApiResponse from "../utils/apiResponse.js"
 import { application } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 
 
 // import dotenv from './.env'
@@ -224,8 +225,8 @@ const userLoggedout=asyncHandler(async(req,res)=>{
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set:{
-                refreshToken:undefined
+            $unset:{
+                refreshToken:1
             }
 
         },
@@ -543,65 +544,57 @@ const getUserChannelProfile=asyncHandler(async(req,res)=>{
 })
 
 // get history
-const getWatchHistory=asyncHandler(async(req,res)=>{
-    const user=await User.aggregate([
-        {
-            $match:{
-                // so here instead of using req.user._id - I will be using and extracting
-                // exact id of mongoose using below method
-                // This is an interview question as well ki hamne _id mai kya milta hai - string
-                // but here in aggregation pipelines, we need extracted actual id
-                _id:new mongoose.Types.objectId(
-                    req.user._id
-                )
-            },
-            $lookup:{
-                // Video is the name of video model but 
-                // remember two things - first letter will be small and it will become plural
-                from:"videos",
-                localField:"watchHistory",
-                foreignField:"_id",
-                as:"watchHistory",
-                pipeline:[
-                    {
-                        $lookup:{
-                            from:"users",
-                            localField:"owner",
-                            foreignField:"_id",
-                            as:"owner", 
-                            pipeline:[
-                                {
-                                    $project:{
-                                        fullName:1,
-                                        username:1,
-                                        avatar:1,
-                                        
 
-                                    }
-                                }
-                            ]
-                        }
-                    },{
-                        $addFields:{
-                            owner:{
-                                $first:"$owner"
-                            }
-                        }
-                    }
-                ]
-
+const getWatchHistory = asyncHandler(async (req, res) => {
+  const user = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user._id)
+      }
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistory",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    fullName: 1,
+                    username: 1,
+                    avatar: 1,
+                  }
+                }
+              ]
             }
-        }
-    ])
+          },
+          {
+            $addFields: {
+              owner: { $first: "$owner" }
+            }
+          }
+        ]
+      }
+    }
+  ]);
 
-    res
+  if (!user.length) {
+    throw new ApiError(404, "User not found!");
+  }
+
+  return res
     .status(200)
-    .json(
-        new ApiResponse(200,user[0].watchHistory,"Watch History created successfully!")
-    )
+    .json(new ApiResponse(200, user[0].watchHistory, "Watch history fetched successfully!"));
+});
 
-
-})
 
 
 export {registerUser,loginUser,userLoggedout,refreshAccessToken,changeCurrentPassword,getCurrentUser
