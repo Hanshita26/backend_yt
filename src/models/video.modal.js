@@ -46,7 +46,7 @@ const videoSchema=new mongoose.Schema(
 
         },
         isPublished:{
-            type:boolean,
+            type:Boolean,
             required:true,
 
         },

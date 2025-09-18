@@ -31,6 +31,8 @@ app.use(cookieParser())
 
 // routes imported
 import userRouter from './routes/user.routes.js'
+import tweetRouter from './routes/tweet.routes.js';
+import likeRouter from './routes/like.routes.js';
 
 // so earlier we were simply using - app.get('/',(req,res)=.{
 // res.send("this is a home page")}) but now controllers and routes are separted
@@ -42,6 +44,8 @@ import userRouter from './routes/user.routes.js'
 // http://localhost:8000/api/v1/users/register
 
 app.use('/api/v1/users',userRouter)
+app.use('/api/v1/tweets',tweetRouter)
+app.use('/api/v1/likes',likeRouter)
 // console.log(`app is listening on: http://localhost:${process.env.PORT}/api/v1/users/register`);
 // app.get("/",(req,res)=>{
 //     res.send("API is working!");

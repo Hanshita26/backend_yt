@@ -1,8 +1,8 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
-import {ApiError} from '../utils/appError.js';
+import {ApiError} from '../utils/appError.js'; // status code and message
 import {User}from '../models/user.modal.js';
 import { filepath, deleteOldPath} from "../utils/cloudinary.js";
-import ApiResponse from "../utils/apiResponse.js"
+import ApiResponse from "../utils/apiResponse.js" // status code , data, message
 import { application } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import jwt from 'jsonwebtoken';
@@ -44,7 +44,8 @@ const registerUser=asyncHandler(async (req,res)=>{
 
     const {fullName,username,email,password}=req.body
     console.log("email:",email, "password:",password,"username:",username,"fullName:",fullName);
-    console.log(req.files);     
+    // console.log(req.files);   
+    // VALIDATIONS  
     if(fullName.trim()==="" || !fullName){
         // STATUS CODE AND MESSAGE
         throw new ApiError(400,"Full Name is required!");

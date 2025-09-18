@@ -2,9 +2,11 @@ import mongoose from 'mongoose';
 
 const tweetsSchema=new mongoose.Schema(
     {
+        // id is generated automatically
         owner:{
             type:mongoose.Schema.Types.ObjectId,
-            required:"User",
+            ref:"User",
+            required:true,
         },
         content:{
             type:String,

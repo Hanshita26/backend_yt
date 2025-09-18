@@ -15,12 +15,13 @@ const likeSchema=new mongoose.Schema(
         },
         likedBy:{ // user
             type:mongoose.Schema.Types.ObjectId,
-                        required:"User",
+                        ref:"User",
+                        required:true,
 
         },
         tweet:{
             type:mongoose.Schema.Types.ObjectId,
-                        required:"Tweet",
+                        ref:"Tweet",
 
         }
     },
