@@ -58,7 +58,7 @@ const videoSchema=new mongoose.Schema(
     {timestamps:true});
 
 
-videoSchema.plugin(mongooseAggregatePaginate) // we can aggregate pipelines through this
+videoSchema.plugin(mongooseAggregatePaginate) // we can use aggregate pipelines through this
 
 
 export const Video=mongoose.model("Video",videoSchema);

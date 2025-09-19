@@ -5,8 +5,38 @@ import {asyncHandler} from '../utils/asyncHandler.js';
 import {Comment} from '../models/comments.modal.js';
 
 const getVideoComments=asyncHandler(async(req,res)=>{
+    // all the videos on which I have comment so far
+    const {videoId}=req.params;
+    if(!videoId){
+        throw new ApiError(404,"Video not found");
+    }
 
-})
+    const{page=1,limit=10}=req.query; // default values
+    const skip=(page-1)*limit; // consistent formula for skip
+
+    const comments=await Comment.find({video:videoId})
+    .skip(skip)
+    .limit(parseInt(limit))
+    .populate("username")
+    .sort({createdAt:-1}); // latest
+
+
+    // to show in frontend - "x of y documents"
+    const totalComments=await Comment.countDocuments({video:videoId});
+
+    return res.status(200)
+    .json(
+        new ApiResponse(200,
+            // data
+            {
+            comments,
+            totalComments,
+            currentPage:parseInt(page),
+            totalPages:Math.ceil(totalComments/limit),
+        }
+            ,`here is a list of all comments: ${totalComments}`)
+    )
+});
 
 const addComment=asyncHandler(async(req,res)=>{
     // on which video it is being commnted and by which user
@@ -94,8 +124,37 @@ const updateComment=asyncHandler(async(req,res)=>{
 })
 
 const deleteComment=asyncHandler(async(req,res)=>{
+
+
+    const {videoId}=req.params;
+    if(!videoId){
+        throw new ApiError(404,"Video not found");
+    }
+
+    const {commentId}=req.params;
+    if(!commentId){
+        throw new ApiError(404,"Comment not found")
+
+    }
+
+    const userId=req.user._id;
+    if(!userId){
+        throw new ApiError(404,"Userid not found");
+    }
+
+    if(commentId.user.toString()!==userId.toString()){
+        throw new ApiError(403,"You are not allowed to delete this comment");
+    }
+
+    await Comment.findByIdAndDelete(commentId);
+
+    return res.status(200)
+    .json(
+        new ApiResponse(200,{},"Comment deleted")
+    )
     
 
 })
+
 
 export {addComment,updateComment,deleteComment,getVideoComments};
