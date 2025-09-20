@@ -460,7 +460,7 @@ const updateCoverImage=asyncHandler(async(req,res)=>{
     )
 })
 
-// subscribers and subscribed
+// subscribers and subscribed --- IMPORTANT 
 
 const getUserChannelProfile=asyncHandler(async(req,res)=>{
 
