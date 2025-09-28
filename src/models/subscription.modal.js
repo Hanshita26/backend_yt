@@ -13,7 +13,6 @@ const subscriptionSchema=new mongoose.Schema(
         }
     },
     
-    {timestamps:true});
-
+    {timestamps:true}); // created At and updated At
 
 export const subscription=mongoose.model("subscription",subscriptionSchema);

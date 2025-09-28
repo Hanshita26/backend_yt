@@ -9,13 +9,13 @@ import {User} from '../models/user.modal.js';
 const toggleSubcription=asyncHandler(async(req,res)=>{
     // channel(channel which we are subscribing) id is being subscribed
     const {channelId}=req.params; // from user controller
-    if(!channelId){
+    if(!isValidObjectId(channelId)){
         throw new ApiError(404,"ChannelId is not found!");
     }
-
+  console.log(channelId);
     // I am subscribing a particular channel so I am the subscriber
     const subscriber=req.user._id;
-    if(!subscriber){
+    if(!isValidObjectId(subscriber)){
         throw new ApiError(404,'Subscriber/user not found!');
     }
 
@@ -25,6 +25,7 @@ const toggleSubcription=asyncHandler(async(req,res)=>{
         subscriber:subscriber,
         channel:channelId,
     });
+    console.log(subscribedAlready)
 
     if(subscribedAlready){
         await subscription.findOneAndDelete({
@@ -32,8 +33,7 @@ const toggleSubcription=asyncHandler(async(req,res)=>{
             channel:channelId,
         })
         message="already subscribed channel has been unsubscribed!"
-    }
-    if(!subscribedAlready){
+    }else{
         await subscription.create({
             subscriber:subscriber,
             channel:channelId,
@@ -51,45 +51,58 @@ const toggleSubcription=asyncHandler(async(req,res)=>{
 // subscriber list of channel
 // user list - all users who have subscribed to that channel
 const getUserChannelSubscribers=asyncHandler(async(req,res)=>{
-    const {channelId}=req.params; // is particular channel ko kitne logon nai subscribe kiya hai
-    if(!channelId){
+    const {channelId}=req.params; // is particular channel ko kitne logon nai subscribe kiya hai 
+    if(!isValidObjectId(channelId)){
         throw new ApiError(404,"channelId not found!");
     }
 
-    // const userId=req.user._id;
-    // if(!userId){
-    //     throw new ApiError(404,"Userid not found!");
-    // }
-
-// using .countDocuments to count no. of users
-    const whohavesubscribedme=await subscription.find({
-        channel:channelId,
-    }).populate(
-        "subscriber");// list of users
-
-    const totalsubscribers=await subscription.countDocuments({
-        channel:channelId
-    });
-
-    if(!whohavesubscribedme.length){
-        return res.status(200)
-        .json(
-            new ApiResponse(200,{
-                subscriber:[],
-                totalsubscribers:0
-            },"No subscribers found for this channel!")
-        )
+    if(!channelId){
+        throw new ApiError(400,"Invalid id!");
     }
 
-    return res.status(200)
-    .json(
-        new ApiResponse(200,{
-            subscribersDetail:whohavesubscribedme,
-            totalsubscribers:totalsubscribers },"Here is the list of users who have subscribed to this particular channel")
-    )
+// detail of users - aggregation pipelines
+// using .countDocuments to count no. of users
+
+const userDetails=await subscription.aggregate([
+    {
+        $match:{
+            channel:new mongoose.Types.ObjectId(channelId)
+        }
 
 
-    
+},
+{
+    $lookup:{
+        from:"users", // make first letter small and make it plural
+        localField:"subscriber",
+        foreignField:"_id",
+        as:"ListOfUsers"
+    }
+
+},
+{
+    $unwind:"$ListOfUsers"
+
+},{
+    $project:{
+        username:"$ListOfUsers.username",
+        email:"$ListOfUsers.email",
+        channelId:1,
+    }
+}
+])  
+
+if(userDetails.length===0){
+    throw new ApiError(400,"User details not available");
+}
+
+const countUsers=userDetails.length;
+return res.status(200)
+.json
+    (new ApiResponse(200,{userDetails,countUsers },"Here is the list of users who subscribed this channel!"));
+
+
+
 })
 
 const getSubscribedChannel=asyncHandler(async(req,res)=>{
@@ -98,33 +111,53 @@ const getSubscribedChannel=asyncHandler(async(req,res)=>{
     if(!subscriberId){
         throw new ApiError(404,"SubscriberId not found");
     }
+    console.log(subscriberId)
 
-    const channels=await subscription.find({
-        subscriber:subscriberId,
-// every channel will have its unqiue channel id
-    })
-    .select("-password -refreshToken")
-    .populate("channel",null,{strictPopulate:false});
+    const channelDetails=await subscription.aggregate
+      (  [{
+        $match:{
+            subscriber:new mongoose.Types.ObjectId(subscriberId)
+        }
 
-    const count=await subscription.countDocuments({
-        subscriber:subscriberId,
-    })
+        },{
+            $lookup:{
+                from:"users",
+                localField:"channel",
+                foreignField:"_id",
+                as:"Ihavesubscribedthese",
+            }
 
+        },{
+            $unwind:"$Ihavesubscribedthese"
 
+        },{
+            $project:{
+                username:"$Ihavesubscribedthese.username",
+                email:"$Ihavesubscribedthese.email"
+               
 
+            }
+        }])
+            console.log(channelDetails)
 
+        if(!channelDetails){
+            throw new ApiError(400,"Channel details not available")
+        }
 
+        if(channelDetails.length===0){
+            new ApiResponse(200,"You have not subscribed any channel yet!")
+        }
+
+        const count=channelDetails.length;
+    
     return res.status(200)
     .json(
         new ApiResponse(200,{
-            channel:channels,
-            count:count
+            channelDetails,
+            count
         },"Here is a list of channels that I have subscribed on this platform!")
     )
 })
-
-
-
 
 
 export {
