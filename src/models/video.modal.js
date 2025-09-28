@@ -3,10 +3,10 @@ import mongooseAggregatePaginate from 'mongoose-aggregate-paginate-v2';
 
 const videoSchema=new mongoose.Schema(
     {
-        id:{
-            type:Number,
-            unique:true,
-        },
+        // id:{
+        //     type:Number,
+        //     unique:true,
+        // },
         videoFile:{
             type:String, // cloudinary url
             required:true,
@@ -50,9 +50,6 @@ const videoSchema=new mongoose.Schema(
             required:true,
 
         },
-
-
-
     },
     
     {timestamps:true});
