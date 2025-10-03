@@ -46,26 +46,59 @@ const createTweet=asyncHandler(async(req,res)=>{
 
 })
 
-// not working properly - I need id to match in deletion case
+// get users tweet
 const getTweet=asyncHandler(async(req,res)=>{
-    const tweetId = req.params._id;
-    if(!tweetId){
-        throw new ApiError(404,"tweet id not found!");
+    // kis user ke tweets nikalni hai
+    const userId=req.user._id;
+    if(!userId){
+        throw new ApiError(400,"userId not found!")
     }
 
-    const tweet=await Tweet.findById(tweetId);
-    if(!tweet){
-        throw new ApiError(404,"Tweets not found!");
+    // I want user details and the tweet(content)
+
+    const userTweet=await Tweet.aggregate([
+        {
+            $match:{
+                owner:new mongoose.Types.ObjectId(userId)
+            }
+            
+        },{
+            $lookup:{
+                from:"users",
+                localField:"owner",
+                foreignField:"_id",
+                as:"userTweets",
+            }
+
+        },{
+            $unwind:"$userTweets",
+
+        },{
+            $project:{
+                content:1,
+                username:"$userTweets.username",
+                avatar:"$userTweets.avatar"
+            }
+
+        }
+    ])
+
+    if(!userTweet){
+        throw new ApiError(404,"User tweets not found!");
+    }
+
+    if(userTweet.length===0){
+        new ApiResponse(200,{},"No tweet by user yet!")
     }
 
     return res.status(200)
     .json(
-        new ApiResponse(200,{tweetId},"Current id found!")
+        new ApiResponse(200,{userTweet},"user tweets fetched successfully!")
     )
-
 })
 
 const updateTweet=asyncHandler(async(req,res)=>{
+    // the content which is being updated, on which tweet and by which user
     const {content}=req.body;
     const {tweetId}=req.params;
 
@@ -88,6 +121,7 @@ const updateTweet=asyncHandler(async(req,res)=>{
         throw new ApiError(404, "Tweet not found");
     }
 
+    // check ownership -----------------------------------------
     if (tweet.owner.toString() !== currUser.toString()) {
         throw new ApiError(403, "You cannot update someone else’s tweet");
     }
@@ -104,7 +138,9 @@ const updateTweet=asyncHandler(async(req,res)=>{
     );
 
     return res.status(200)
-    .json(200,{},"Tweet updated successfully!")
+    .json(
+        new ApiResponse(200,{updatedTweet},"Tweet updated successfully!")
+    )
 
 
 
@@ -116,7 +152,7 @@ const deleteTweet=asyncHandler(async(req,res)=>{
     // if exists, only its owner can delete it
     // remove it from database
 
-    const tweetId=req.params.id;
+    const {tweetId}=req.params;
     if(!tweetId){
         throw new ApiError(404,"TweetId is required");
     }
@@ -126,8 +162,9 @@ const deleteTweet=asyncHandler(async(req,res)=>{
         throw new ApiError(404,"Tweet not found!");
     }
 
+    // checking ownership -----------------------------------
     if(tweet.owner.toString()!==req.user._id.toString()){
-        throw new ApiError("You cannot delete someone eles's tweet!")
+        throw new ApiError(400,"You cannot delete someone eles's tweet!")
     }
 
     const deletion=await Tweet.findByIdAndDelete(tweetId);

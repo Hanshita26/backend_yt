@@ -4,53 +4,111 @@ import ApiResponse from '../utils/apiResponse.js';
 import {asyncHandler} from '../utils/asyncHandler.js';
 import {Comment} from '../models/comments.modal.js';
 
+
+// first there is a connection between comment and user and then connected with video
 const getVideoComments=asyncHandler(async(req,res)=>{
-    // all the videos on which I have comment so far
+    // get all commments for a video - is particular video ke sare comments
     const {videoId}=req.params;
     if(!videoId){
-        throw new ApiError(404,"Video not found");
+        throw new ApiError(404,"VideoId not found");
     }
 
     const{page=1,limit=10}=req.query; // default values
     const skip=(page-1)*limit; // consistent formula for skip
 
-    const comments=await Comment.find({video:videoId})
-    .skip(skip)
-    .limit(parseInt(limit))
-    .populate("username")
-    .sort({createdAt:-1}); // latest
+    // const videoDetail=await Comment.findById(videoId).select("title description");
+    // if(!videoDetail){
+    //     throw new ApiError(400,"Video details not found!");
+    // }
 
 
-    // to show in frontend - "x of y documents"
-    const totalComments=await Comment.countDocuments({video:videoId});
+    const listOfComments=await Comment.aggregate([
+        {
+            $match:{
+                video:new mongoose.Types.ObjectId(videoId)
+            }
+            
+        },{
+            $lookup:{
+                from:"users",
+                localField:"owner",
+                foreignField:"_id",
+                as:"ownerDetails",
+            }
+
+        },{
+            $unwind:"$ownerDetails", // user model connected
+
+        }, // connecting it with video model
+        {
+            $lookup:{
+                from:"videos",
+                localField:"video",
+                foreignField:"_id",
+                as:"videoDetail",
+            }
+
+        },{
+            $unwind:"$videoDetail",
+
+        },
+        {
+            $project:{
+                content:1,
+                "ownerDetails.username":1,
+                "ownerDetails.avatar":1,
+                "videoDetail.title":1,
+                "videoDetail.description":1,
+            }
+
+
+        },
+            {$skip:skip},
+            {$limit:parseInt(limit)},
+        
+    ])
+
+    const countOfComments=await Comment.countDocuments({
+        video:new mongoose.Types.ObjectId(videoId)
+    });
+
+    if(!listOfComments){
+        throw new ApiError(400,"Comments not found!")
+    }
+
+    if(countOfComments===0){
+        return res.status(200)
+        .json(
+            new ApiResponse(200,{},"No comment on this video yet!")
+        )
+        
+    }
 
     return res.status(200)
     .json(
         new ApiResponse(200,
-            // data
-            {
-            comments,
-            totalComments,
-            currentPage:parseInt(page),
-            totalPages:Math.ceil(totalComments/limit),
-        }
-            ,`here is a list of all comments: ${totalComments}`)
+            {listOfComments,countOfComments,page:Number(page),limit:Number(limit)}
+            ,"All comments of this video fetched")
     )
 });
 
 const addComment=asyncHandler(async(req,res)=>{
-    // on which video it is being commnted and by which user
+    // on which video it is being commented and by which user
     // if all verified, we can create a comment and add it in database and send response
 
     const {content}=req.body;
     if(!content){
         throw new ApiError(404,"Content not found");
     }
+
+    // on the video where I want to comment-----------------
     // const {videoId}=req.params;
     // if(!videoId){
     //     throw new ApiError(404,"Video not found");
     // }
 
+
+    // for authentication purpose
     const userId=req.user._id;
     if(!userId){
         throw new ApiError(404,"UserId not found!");
@@ -85,25 +143,37 @@ const updateComment=asyncHandler(async(req,res)=>{
     // }
     const userId=req.user._id;
     if(!userId){
-        throw new ApiError(400,"userid not found!");
+        throw new ApiError(404,"userid not found!");
     }
 
     const {commentId}=req.params;
     if(!commentId){
-        throw new ApiError("Comment id not found!");
+        throw new ApiError(404,"Comment id not found!");
     }
 
-    const {content}=req.body;
-    if(!content){
+    const {Updatedcontent}=req.body;
+    if(!Updatedcontent){
         throw new ApiError(404,"Comment-to-update not found!")
     }
+
+    // only authenticated user will be allowed to update the comment, not everybody can update someone's else comment
+    // checking ownership -----------------------------------------
+    const comment=await Comment.findById(commentId);
+    if(!comment){
+        throw new ApiError(400,"Comment not found!");
+    }
+
+    if(comment.owner.toString()!==userId.toString()){
+        throw new ApiError(400,"you are not a validated user to update the comment");
+    }
+
 
     const updatedcomment=await Comment.findByIdAndUpdate(
         commentId,
         
         {
         $set:{
-            content,
+            content:Updatedcontent,
         },
 
     },{
@@ -142,15 +212,25 @@ const deleteComment=asyncHandler(async(req,res)=>{
         throw new ApiError(404,"Userid not found");
     }
 
-    if(commentId.user.toString()!==userId.toString()){
+    // checking ownership
+    const comment =await Comment.findById(commentId);
+    if(!comment){
+        throw new ApiError(404,"Comment not found!");
+    }
+
+    if(comment.owner.toString()!==userId.toString()){
         throw new ApiError(403,"You are not allowed to delete this comment");
     }
 
-    await Comment.findByIdAndDelete(commentId);
+    if(comment.video.toString()!==videoId.toString()){
+        throw new ApiError(404,"comment does not belong to this video!")
+    }
+
+    const deletedComment= await Comment.findByIdAndDelete(commentId);
 
     return res.status(200)
     .json(
-        new ApiResponse(200,{},"Comment deleted")
+        new ApiResponse(200,{deletedComment},"Comment deleted")
     )
     
 
